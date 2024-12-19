@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MiniZinc Frontend</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+
+        textarea {
+            width: 100%;
+            height: 200px;
+        }
+
+        button {
+            margin-top: 10px;
+            padding: 10px 20px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background-color: #0056b3;
+        }
+
+        pre {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border: 1px solid #dee2e6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>MiniZinc Solver</h1>
+        <textarea id="minizincCode" placeholder="Escribe tu código MiniZinc aquí..."></textarea>
+        <button id="solveButton">Ejecutar</button>
+        <h2>Resultado:</h2>
+        <pre id="result"></pre>
+    </div>
+
+    <script>
+        const solveButton = document.getElementById('solveButton');
+        const resultArea = document.getElementById('result');
+        const minizincCode = document.getElementById('minizincCode');
+
+        solveButton.addEventListener('click', () => {
+            const code = minizincCode.value.trim();
+            if (!code) {
+                resultArea.textContent = 'Por favor, ingresa código MiniZinc.';
+                return;
+            }
+
+            resultArea.textContent = 'Resolviendo...';
+
+            // Enviar el código al servidor usando fetch
+            fetch('http://localhost:3000/execute', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ code }),
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.output) {
+                    resultArea.textContent = data.output; // Muestra el resultado
+                } else if (data.error) {
+                    resultArea.textContent = `Error: ${data.error}`;
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                resultArea.textContent = 'Hubo un error al procesar la solicitud.';
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -16,11 +16,20 @@ array[1..k] of var 0..n-1: new_y;  % Coordenadas y de los nuevos programas
 array[1..9] of int: dx = [-1, -1, -1,  0, 1, 1,  1, 0, 0];
 array[1..9] of int: dy = [-1,  0,  1,  1, 1, 0, -1, -1, 0];
 
+% Array para almacenar las posiciones contiguas de las nuevas localizaciones
+array[1..k, 1..9] of var int: neighbor_x;  % Coordenadas x de las posiciones contiguas
+array[1..k, 1..9] of var int: neighbor_y;  % Coordenadas y de las posiciones contiguas
+
+%Suma de las localizaciones establecidas
+int: total_sum_P = sum([sum_with_neighbors_old(x_coordinate[i], y_coordinate[i], P) | i in 1..v]);
+int: total_sum_E = sum([sum_with_neighbors_old(x_coordinate[i], y_coordinate[i], E) | i in 1..v]);
+int: total_sum_old_locations = total_sum_P + total_sum_E;
+
 % Función para verificar si una posición está dentro de la matriz
 function bool: is_in_bounds(int: x, int: y) =
     x >= 0 /\ x < n /\ y >= 0 /\ y < n;
     
-% Función para verificar si una posición está dentro de la matriz
+% Función para verificar si una posición está dentro de la matriz (con variables de decision)
 function var bool: is_in_bounds(var int: x, var int: y) =
     x >= 0 /\ x < n /\ y >= 0 /\ y < n;
 
@@ -28,32 +37,28 @@ function var bool: is_in_bounds(var int: x, var int: y) =
 function int: sum_with_neighbors_old(int: x, int: y, array[int, int] of int: matrix) = (
         sum([matrix[x + dx[i], y + dy[i]] | i in 1..9 where is_in_bounds(x + dx[i], y + dy[i])])
     );
-    
-int: total_sum_P = sum([sum_with_neighbors_old(x_coordinate[i], y_coordinate[i], P) | i in 1..v]);
-int: total_sum_E = sum([sum_with_neighbors_old(x_coordinate[i], y_coordinate[i], E) | i in 1..v]);
-int: total_sum_old_locations = total_sum_P + total_sum_E;
-
+% Función para sumar la coordenada enviada con sus puntos contiguos (con variables de decision)
 function var int: sum_with_neighbors(var int: x, var int: y, array[int, int] of int: matrix) = (
     sum([matrix[x + dx[i], y + dy[i]] | i in 1..9 where is_in_bounds(x + dx[i], y + dy[i])])
 );
 
-% Maximizar la ganancia total de las nuevas localizaciones
-var int: total_gain = sum([
-    (sum_with_neighbors(new_x[i], new_y[i], P) +
-     sum_with_neighbors(new_x[i], new_y[i], E))
-    | i in 1..k
-]);
-
-/*
-% Restricción: las nuevas localizaciones no deben ser contiguas (ni la misma posición ni las posiciones contiguas)
-constraint forall(i, j in 1..k where i != j)(
-    % Las localizaciones no deben solaparse ni ser contiguas
-    (abs(new_x[i] - new_x[j]) > 1 \/ abs(new_y[i] - new_y[j]) > 1) /\
-    forall(d in 1..9) (
-        not (new_x[i] + dx[d] == new_x[j] /\ new_y[i] + dy[d] == new_y[j])
-    )
+% Restricción para calcular las posiciones contiguas y asegurarse de que están dentro de los límites
+constraint forall(i in 1..k, j in 1..9)(
+    neighbor_x[i, j] = new_x[i] + dx[j] /\
+    neighbor_y[i, j] = new_y[i] + dy[j] /\
+    is_in_bounds(neighbor_x[i, j], neighbor_y[i, j])
 );
-*/
+
+% Restricción para asegurar que no haya posiciones contiguas con las localizaciones ya establecidas
+constraint forall(i in 1..k, j in 1..9, e in 1..v, m in 1..9)(
+    (neighbor_x[i, j] != x_coordinate[e] \/ neighbor_y[i, j] != y_coordinate[e]) /\
+    (neighbor_x[i, j] != x_coordinate[e] + dx[m] \/ neighbor_y[i, j] != y_coordinate[e] + dy[m])
+);
+
+% Restricción para asegurar que no haya solapamiento entre posiciones contiguas
+constraint forall(i, l in 1..k, j in 1..9, m in 1..9 where i != l)(
+    (neighbor_x[i, j] != neighbor_x[l, m] \/ neighbor_y[i, j] != neighbor_y[l, m])
+);
 
 
 % Restricción 2: El segmento de población no puede ser menor que 25 en las nuevas localizaciones
@@ -67,12 +72,29 @@ constraint forall(i in 1..k)(
     sum([E[new_x[i] + dx[j], new_y[i] + dy[j]] 
         | j in 1..9 where is_in_bounds(new_x[i] + dx[j], new_y[i] + dy[j])]) >= 20
 );
+    
+% Función objetivo: Maximizar la ganancia total de las nuevas localizaciones
+var int: total_gain_new = 
+    sum(i in 1..k)(
+        sum([P[new_x[i] + dx[j], new_y[i] + dy[j]] 
+             | j in 1..9 where is_in_bounds(new_x[i] + dx[j], new_y[i] + dy[j])]) +
+        sum([E[new_x[i] + dx[j], new_y[i] + dy[j]] 
+             | j in 1..9 where is_in_bounds(new_x[i] + dx[j], new_y[i] + dy[j])])
+    );
 
-% Resolver el problema maximizando la ganancia total
-solve maximize total_gain;
+%Suma de las locaciones establecidas mas las locaciones nuevas
+var int: sum_old_locations_and_new_locations = total_sum_old_locations + total_gain_new;
+
+% Maximizar la ganancia total
+solve maximize total_gain_new;
 
 output [
     "new_x: ", show(new_x), "\n",
     "new_y: ", show(new_y), "\n",
-    "total_gain: ", show(total_gain), "\n"
+    "Neighbors:\n",
+    show([neighbor_x[i, j] | i in 1..k, j in 1..9]), "\n",
+    show([neighbor_y[i, j] | i in 1..k, j in 1..9]), "\n",
+    "total_gain: ", show(total_gain_new), "\n",
+    "total_old_locations: ", show(total_sum_old_locations), "\n",
+    "total :", show(sum_old_locations_and_new_locations)
 ];

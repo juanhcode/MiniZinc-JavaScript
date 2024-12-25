@@ -16,11 +16,6 @@
             margin: auto;
         }
 
-        textarea {
-            width: 100%;
-            height: 200px;
-        }
-
         button {
             margin-top: 10px;
             padding: 10px 20px;
@@ -34,12 +29,12 @@
             background-color: #0056b3;
         }
 
-        pre {
-            background-color: #f8f9fa;
+        select {
+            margin-top: 10px;
             padding: 10px;
-            border: 1px solid #dee2e6;
-            white-space: pre-wrap;
-            word-wrap: break-word;
+            width: 100%;
+            background-color: #f1f1f1;
+            border: 1px solid #ddd;
         }
     </style>
 </head>
@@ -48,19 +43,27 @@
     <div class="container">
         <h1>MiniZinc Solver</h1>
         <input type="file" id="fileInput" accept=".txt">
-        <button id="solveButton">Ejecutar</button>
-        <h2>Resultado:</h2>
-        <textarea id="result" readonly></textarea>
+        <h2>Seleccionar Solver:</h2>
+        <select id="solverSelect">
+            <option value="chuffed">Chuffed</option>
+            <option value="gecode">Gecode</option>
+            <option value="gurobi">Gurobi</option>
+        </select>
+        <button id="solveButton" disabled>Ejecutar</button>
+        <button id="exportButton" disabled>Exportar Soluciones</button>
     </div>
 
     <script type="module">
         import { Model } from 'https://cdn.jsdelivr.net/npm/minizinc/dist/minizinc.mjs';
         const model = new Model();
-        const result = document.getElementById('result');
         const solveButton = document.getElementById('solveButton');
         const fileInput = document.getElementById('fileInput');
+        const exportButton = document.getElementById('exportButton');
+        console.log("ExportButton" + exportButton);
+        const solverSelect = document.getElementById('solverSelect');
 
         let entradaUsuario = '';
+        let soluciones = [];
 
         fileInput.addEventListener('change', (event) => {
             const file = event.target.files[0];
@@ -74,12 +77,10 @@
             reader.readAsText(file);
         });
 
-
         function formatArray2D(array) {
             return array.map(row => row.join(', ')).join(',\n    ');
         }
 
-        // Función para procesar la entrada y convertirla
         function convertirEntrada(entrada) {
             const lines = entrada.trim().split('\n');
             const v = lines[0].split(' ').map(Number);
@@ -124,8 +125,6 @@ E = array2d(0..n-1, 0..n-1, [
         `.trim();
         }
 
-
-        // Cargar el modelo automáticamente
         async function loadModel() {
             try {
                 const response = await fetch('Modelo1.mzn');
@@ -134,7 +133,6 @@ E = array2d(0..n-1, 0..n-1, [
                 console.log("Modelo cargado correctamente.");
             } catch (error) {
                 console.error("Error al cargar el modelo:", error);
-                result.textContent = 'Error al cargar el archivo de modelo.';
             }
         }
 
@@ -144,20 +142,19 @@ E = array2d(0..n-1, 0..n-1, [
             entradaUsuario = entradaUsuario.trim();
 
             if (!entradaUsuario) {
-                result.textContent = 'Por favor, escribe los datos en el formato de entrada.';
+                alert('Por favor, escribe los datos en el formato de entrada.');
                 return;
             }
 
             try {
-                // Procesar la entrada del usuario
                 const dznCode = convertirEntrada(entradaUsuario);
 
-                // Agregar archivo .dzn al modelo
                 model.addFile('Datos.dzn', dznCode);
 
+                const solver = solverSelect.value; // Obtener el solver seleccionado
                 const solve = model.solve({
                     options: {
-                        solver: 'chuffed',
+                        solver: solver,
                         'all-solutions': true,
                     }
                 });
@@ -166,7 +163,7 @@ E = array2d(0..n-1, 0..n-1, [
                     const responseRaw = formatSolutionRaw(solution.output.raw);
                     const lines = responseRaw.trim().split('\n');
                     const primero = lines[0];
-                    const segundo = lines[1]
+                    const segundo = lines[1];
                     const array = lines[2];
                     const arrayFormatted = array.replace(/[\[\]]/g, '').split(',').map(Number);
                     const array2 = lines[3];
@@ -175,38 +172,50 @@ E = array2d(0..n-1, 0..n-1, [
                     const arrayFormatted3 = array3.replace(/[\[\]]/g, '').split(',').map(Number);
                     const array4 = lines[5];
                     const arrayFormatted4 = array4.replace(/[\[\]]/g, '').split(',').map(Number);
-                    console.log(arrayFormatted3);
-                    console.log(arrayFormatted4);
 
-                    // Crear el diccionario
                     const diccionario = arrayFormatted3.reduce((acc, clave, index) => {
                         acc[clave] = arrayFormatted4[index];
                         return acc;
                     }, {});
 
-                    // Ordenar el diccionario por claves de menor a mayor
                     const diccionarioOrdenado = Object.keys(diccionario)
-                        .sort((a, b) => a - b)  // Ordenar las claves
+                        .sort((a, b) => a - b)
                         .reduce((acc, key) => {
                             acc[key] = diccionario[key];
                             return acc;
                         }, {});
 
-                    // Formatear el diccionario sin comillas en las claves y mostrar valor: clave
                     const diccionarioFormateado = Object.keys(diccionarioOrdenado)
                         .map(key => `${diccionarioOrdenado[key]} ${key}`)
                         .join('\n');
 
-                    const respuesta = `${primero}\n${segundo}\n${arrayFormatted2[0]} ${arrayFormatted[0]}\n${arrayFormatted2[1]} ${arrayFormatted[1]}\n${arrayFormatted2[2]} ${arrayFormatted[2]}\n${diccionarioFormateado}
-                    `;
-                    result.textContent += respuesta + '\n\n';
+                    const respuesta = `${primero}\n${segundo}\n${arrayFormatted2[0]} ${arrayFormatted[0]}\n${arrayFormatted2[1]} ${arrayFormatted[1]}\n${arrayFormatted2[2]} ${arrayFormatted[2]}\n${diccionarioFormateado}`;
+                    console.log(respuesta);
+                    soluciones.push(respuesta);
+                    console.log(soluciones);
+                     // Guardamos las soluciones en el array
                 });
 
+                console.log("Terminado");
+
                 const finalResult = await solve;
-                result.textContent += 'Status: ' + finalResult.status + '\n';
+                exportButton.disabled = false; // Habilitar el botón de exportar
 
             } catch (error) {
-                result.textContent = 'Error: ' + error.message;
+                alert('Error: ' + error.message);
+            }
+        });
+
+        // Función para exportar las soluciones a un archivo de texto
+        exportButton.addEventListener('click', () => {
+            print("Hola");
+            if (confirm('¿Deseas descargar las soluciones?')) {
+            const blob = new Blob([soluciones.join('\n\n')], { type: 'text/plain' });
+            console.log(blob);
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'soluciones.txt';
+            link.click();
             }
         });
 

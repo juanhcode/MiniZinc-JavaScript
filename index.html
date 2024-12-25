@@ -47,48 +47,174 @@
 <body>
     <div class="container">
         <h1>MiniZinc Solver</h1>
-        <textarea id="minizincCode" placeholder="Escribe tu código MiniZinc aquí..."></textarea>
+        <input type="file" id="fileInput" accept=".txt">
         <button id="solveButton">Ejecutar</button>
         <h2>Resultado:</h2>
-        <pre id="result"></pre>
+        <textarea id="result" readonly></textarea>
     </div>
 
-    <script>
+    <script type="module">
+        import { Model } from 'https://cdn.jsdelivr.net/npm/minizinc/dist/minizinc.mjs';
+        const model = new Model();
+        const result = document.getElementById('result');
         const solveButton = document.getElementById('solveButton');
-        const resultArea = document.getElementById('result');
-        const minizincCode = document.getElementById('minizincCode');
+        const fileInput = document.getElementById('fileInput');
 
-        solveButton.addEventListener('click', () => {
-            const code = minizincCode.value.trim();
-            if (!code) {
-                resultArea.textContent = 'Por favor, ingresa código MiniZinc.';
+        let entradaUsuario = '';
+
+        fileInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                entradaUsuario = e.target.result;
+                solveButton.disabled = false; // Habilitar el botón al cargar el archivo
+            };
+            reader.readAsText(file);
+        });
+
+
+        function formatArray2D(array) {
+            return array.map(row => row.join(', ')).join(',\n    ');
+        }
+
+        // Función para procesar la entrada y convertirla
+        function convertirEntrada(entrada) {
+            const lines = entrada.trim().split('\n');
+            const v = lines[0].split(' ').map(Number);
+            const n = lines[4].split(' ').map(Number);
+            const k = lines[35].split(' ').map(Number);
+            const x_coordinate = [
+                parseInt(lines[1].split(' ')[1]),
+                parseInt(lines[2].split(' ')[1]),
+                parseInt(lines[3].split(' ')[1])
+            ];
+            const y_coordinate = [
+                parseInt(lines[1].split(' ')[0]),
+                parseInt(lines[2].split(' ')[0]),
+                parseInt(lines[3].split(' ')[0])
+            ];
+            const p = [];
+            for (let i = 5; i <= 19; i++) {
+                const elements = lines[i].split(' ').map(Number);
+                p.push(elements);
+            }
+            const e = [];
+            for (let i = 20; i <= 34; i++) {
+                const elements = lines[i].split(' ').map(Number);
+                e.push(elements);
+            }
+            return `
+n=${n}; % Tamaño de matriz
+k=${k}; % Nuevas localizaciones
+v=${v}; % Localizaciones establecidas
+
+x_coordinate = [${x_coordinate.join(', ')}];
+y_coordinate = [${y_coordinate.join(', ')}];
+
+P = array2d(0..n-1, 0..n-1, [
+    ${formatArray2D(p)}
+
+]);
+
+E = array2d(0..n-1, 0..n-1, [
+    ${formatArray2D(e)}
+]);
+        `.trim();
+        }
+
+
+        // Cargar el modelo automáticamente
+        async function loadModel() {
+            try {
+                const response = await fetch('Modelo1.mzn');
+                const modelCode = await response.text();
+                model.addFile('Modelo1.mzn', modelCode);
+                console.log("Modelo cargado correctamente.");
+            } catch (error) {
+                console.error("Error al cargar el modelo:", error);
+                result.textContent = 'Error al cargar el archivo de modelo.';
+            }
+        }
+
+        loadModel();
+
+        solveButton.addEventListener('click', async () => {
+            entradaUsuario = entradaUsuario.trim();
+
+            if (!entradaUsuario) {
+                result.textContent = 'Por favor, escribe los datos en el formato de entrada.';
                 return;
             }
 
-            resultArea.textContent = 'Resolviendo...';
+            try {
+                // Procesar la entrada del usuario
+                const dznCode = convertirEntrada(entradaUsuario);
 
-            // Enviar el código al servidor usando fetch
-            fetch('http://localhost:3000/execute', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ code }),
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.output) {
-                    resultArea.textContent = data.output; // Muestra el resultado
-                } else if (data.error) {
-                    resultArea.textContent = `Error: ${data.error}`;
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                resultArea.textContent = 'Hubo un error al procesar la solicitud.';
-            });
+                // Agregar archivo .dzn al modelo
+                model.addFile('Datos.dzn', dznCode);
+
+                const solve = model.solve({
+                    options: {
+                        solver: 'chuffed',
+                        'all-solutions': true,
+                    }
+                });
+
+                solve.on('solution', solution => {
+                    const responseRaw = formatSolutionRaw(solution.output.raw);
+                    const lines = responseRaw.trim().split('\n');
+                    const primero = lines[0];
+                    const segundo = lines[1]
+                    const array = lines[2];
+                    const arrayFormatted = array.replace(/[\[\]]/g, '').split(',').map(Number);
+                    const array2 = lines[3];
+                    const arrayFormatted2 = array2.replace(/[\[\]]/g, '').split(',').map(Number);
+                    const array3 = lines[4];
+                    const arrayFormatted3 = array3.replace(/[\[\]]/g, '').split(',').map(Number);
+                    const array4 = lines[5];
+                    const arrayFormatted4 = array4.replace(/[\[\]]/g, '').split(',').map(Number);
+                    console.log(arrayFormatted3);
+                    console.log(arrayFormatted4);
+
+                    // Crear el diccionario
+                    const diccionario = arrayFormatted3.reduce((acc, clave, index) => {
+                        acc[clave] = arrayFormatted4[index];
+                        return acc;
+                    }, {});
+
+                    // Ordenar el diccionario por claves de menor a mayor
+                    const diccionarioOrdenado = Object.keys(diccionario)
+                        .sort((a, b) => a - b)  // Ordenar las claves
+                        .reduce((acc, key) => {
+                            acc[key] = diccionario[key];
+                            return acc;
+                        }, {});
+
+                    // Formatear el diccionario sin comillas en las claves y mostrar valor: clave
+                    const diccionarioFormateado = Object.keys(diccionarioOrdenado)
+                        .map(key => `${diccionarioOrdenado[key]} ${key}`)
+                        .join('\n');
+
+                    const respuesta = `${primero}\n${segundo}\n${arrayFormatted2[0]} ${arrayFormatted[0]}\n${arrayFormatted2[1]} ${arrayFormatted[1]}\n${arrayFormatted2[2]} ${arrayFormatted[2]}\n${diccionarioFormateado}
+                    `;
+                    result.textContent += respuesta + '\n\n';
+                });
+
+                const finalResult = await solve;
+                result.textContent += 'Status: ' + finalResult.status + '\n';
+
+            } catch (error) {
+                result.textContent = 'Error: ' + error.message;
+            }
         });
+
+        function formatSolutionRaw(data) {
+            return data;
+        }
     </script>
+
 </body>
 
 </html>

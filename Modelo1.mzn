@@ -89,12 +89,11 @@ var int: sum_old_locations_and_new_locations = total_sum_old_locations + total_g
 solve maximize total_gain_new;
 
 output [
-    "new_x: ", show(new_x), "\n",
-    "new_y: ", show(new_y), "\n",
-    "Neighbors:\n",
-    show([neighbor_x[i, j] | i in 1..k, j in 1..9]), "\n",
-    show([neighbor_y[i, j] | i in 1..k, j in 1..9]), "\n",
-    "total_gain: ", show(total_gain_new), "\n",
-    "total_old_locations: ", show(total_sum_old_locations), "\n",
-    "total :", show(sum_old_locations_and_new_locations)
+    show(total_sum_old_locations), "\n",
+    show(sum_old_locations_and_new_locations), "\n",
+    show(x_coordinate), "\n",
+    show(y_coordinate), "\n",
+    show(new_x), "\n",
+    show(new_y), "\n",
+    
 ];

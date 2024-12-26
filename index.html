@@ -193,6 +193,32 @@ E = array2d(0..n-1, 0..n-1, [
                     soluciones.push(respuesta);
                     console.log(respuesta);
                     // Guardamos las soluciones en el array
+                         if (!localStorage.getItem('modalShown')) {
+                         const modal = document.createElement('div');
+                         modal.style.position = 'fixed';
+                         modal.style.top = '50%';
+                         modal.style.left = '50%';
+                         modal.style.transform = 'translate(-50%, -50%)';
+                         modal.style.backgroundColor = 'white';
+                         modal.style.padding = '20px';
+                         modal.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.1)';
+                         modal.style.zIndex = '1000';
+                         modal.innerHTML = `
+                             <p>Proceso terminado, puedes descargar las soluciones.</p>
+                             <button id="closeModalButton">Aceptar</button>
+                         `;
+                         document.body.appendChild(modal);
+     
+                         const closeModalButton = modal.querySelector('#closeModalButton');
+                         closeModalButton.addEventListener('click', () => {
+                             document.body.removeChild(modal);
+                             localStorage.setItem('modalShown', 'true');
+                         }, { once: true });
+                     }
+                });
+
+                console.log("Terminado");
+
                 });
                 const finalResult = await solve;
                 exportButton.disabled = false; // Habilitar el botón de exportar

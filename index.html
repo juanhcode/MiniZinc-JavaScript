@@ -48,7 +48,7 @@
         <select id="solverSelect">
             <option value="chuffed">Chuffed</option>
             <option value="gecode">Gecode</option>
-            <option value="or-tools">Or-tools</option>
+            <option value="highs">HIGHS 1.7.2</option>
         </select>
         <button id="solveButton" disabled>Ejecutar</button>
         <button id="exportButton">Exportar Soluciones</button>
@@ -84,28 +84,46 @@
         function convertirEntrada(entrada) {
             const lines = entrada.trim().split('\n');
             const v = lines[0].split(' ').map(Number);
-            const n = lines[4].split(' ').map(Number);
-            const k = lines[35].split(' ').map(Number);
-            const x_coordinate = [
-                parseInt(lines[1].split(' ')[1]),
-                parseInt(lines[2].split(' ')[1]),
-                parseInt(lines[3].split(' ')[1])
-            ];
-            const y_coordinate = [
-                parseInt(lines[1].split(' ')[0]),
-                parseInt(lines[2].split(' ')[0]),
-                parseInt(lines[3].split(' ')[0])
-            ];
+            const k = lines[lines.length - 1].split(' ').map(Number);
+            const n = lines[v[0] + 1];
+            const x_coordinate = [];
+            const y_coordinate = [];
+            for (let i = 1; i <= v; i++) {
+                const elements = lines[i].split(' ').map(Number);
+                x_coordinate.push(elements[1]);
+                y_coordinate.push(elements[0]);
+            }
+            const inicioP = lines[v[0] + 2];
+            const finalP = lines[(v[0] + 2) + (n - 1)];
             const p = [];
-            for (let i = 5; i <= 19; i++) {
+            for (let i = v[0] + 2; i <= (v[0] + 2) + (n - 1); i++) {
                 const elements = lines[i].split(' ').map(Number);
                 p.push(elements);
             }
+            let inicioE = lines[(v[0] + 2) + (n - 1) + 1];
+            let finalE = lines[(v[0] + 2) + (n - 1) + 1 + (n - 1)];
             const e = [];
-            for (let i = 20; i <= 34; i++) {
+            for (let i = (v[0] + 2) + (n - 1) + 1; i <= (v[0] + 2) + (n - 1) + 1 + (n - 1); i++) {
                 const elements = lines[i].split(' ').map(Number);
                 e.push(elements);
             }
+            console.log(`
+            n=${n}; % Tamaño de matriz
+            k=${k}; % Nuevas localizaciones
+            v=${v}; % Localizaciones establecidas
+
+            x_coordinate = [${x_coordinate.join(', ')}];
+            y_coordinate = [${y_coordinate.join(', ')}];
+
+            P = array2d(0..n-1, 0..n-1, [
+                ${formatArray2D(p)}
+
+            ]);
+
+            E = array2d(0..n-1, 0..n-1, [
+                ${formatArray2D(e)}
+            ]);
+            `.trim());
             return `
 n=${n}; % Tamaño de matriz
 k=${k}; % Nuevas localizaciones
@@ -159,19 +177,23 @@ E = array2d(0..n-1, 0..n-1, [
                 });
 
                 solve.on('solution', solution => {
-                    console.log("Empezó a resolver");
                     const responseRaw = formatSolutionRaw(solution.output.raw);
                     const lines = responseRaw.trim().split('\n');
+                    console.log(lines);
                     const primero = lines[0];
                     const segundo = lines[1];
                     const array = lines[2];
                     const arrayFormatted = array.replace(/[\[\]]/g, '').split(',').map(Number);
+                    console.log("Array Formatted", arrayFormatted);
                     const array2 = lines[3];
                     const arrayFormatted2 = array2.replace(/[\[\]]/g, '').split(',').map(Number);
+                    console.log("Array Formatted 2", arrayFormatted2);
                     const array3 = lines[4];
                     const arrayFormatted3 = array3.replace(/[\[\]]/g, '').split(',').map(Number);
+                    console.log("Array Formatted 3", arrayFormatted3);
                     const array4 = lines[5];
                     const arrayFormatted4 = array4.replace(/[\[\]]/g, '').split(',').map(Number);
+                    console.log("Array Formatted 4", arrayFormatted4);
 
                     const diccionario = arrayFormatted3.reduce((acc, clave, index) => {
                         acc[clave] = arrayFormatted4[index];
@@ -189,12 +211,14 @@ E = array2d(0..n-1, 0..n-1, [
                         .map(key => `${diccionarioOrdenado[key]} ${key}`)
                         .join('\n');
 
-                    const respuesta = `${primero}\n${segundo}\n${arrayFormatted2[0]} ${arrayFormatted[0]}\n${arrayFormatted2[1]} ${arrayFormatted[1]}\n${arrayFormatted2[2]} ${arrayFormatted[2]}\n${diccionarioFormateado}`;
+                    console.log("Diccionario Formateado", diccionarioFormateado);
+
+                    const respuesta = `${primero}\n${segundo}\n${arrayFormatted2[0] || ''} ${arrayFormatted[0] || ''}\n${arrayFormatted2[1] || ''} ${arrayFormatted[1] || ''}\n${arrayFormatted2[2] || ''} ${arrayFormatted[2] || ''}\n${diccionarioFormateado}`;
                     soluciones.push(respuesta);
                     console.log(respuesta);
-                    // Guardamos las soluciones en el array
                 });
                 const finalResult = await solve;
+
                 exportButton.disabled = false; // Habilitar el botón de exportar
 
             } catch (error) {
@@ -204,6 +228,10 @@ E = array2d(0..n-1, 0..n-1, [
 
         // Función para exportar las soluciones a un archivo de texto
         exportButton.addEventListener('click', () => {
+            if (soluciones.length === 0) {
+                alert('No hay soluciones para exportar.');
+                return;
+            }
             const ultimo = soluciones[soluciones.length - 1];
             if (confirm('¿Deseas descargar la última solución?')) {
                 const blob = new Blob([ultimo], { type: 'text/plain' });

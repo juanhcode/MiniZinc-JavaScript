@@ -48,7 +48,8 @@
         <select id="solverSelect">
             <option value="chuffed">Chuffed</option>
             <option value="gecode">Gecode</option>
-            <option value="or-tools">Or-tools</option>
+            <option value="coin-bc">Coin-BC</option>
+            <option value="highs">HIGHS 1.7.2</option>
         </select>
         <button id="solveButton" disabled>Ejecutar</button>
         <button id="exportButton">Exportar Soluciones</button>
@@ -192,35 +193,9 @@ E = array2d(0..n-1, 0..n-1, [
                     const respuesta = `${primero}\n${segundo}\n${arrayFormatted2[0]} ${arrayFormatted[0]}\n${arrayFormatted2[1]} ${arrayFormatted[1]}\n${arrayFormatted2[2]} ${arrayFormatted[2]}\n${diccionarioFormateado}`;
                     soluciones.push(respuesta);
                     console.log(respuesta);
-                    // Guardamos las soluciones en el array
-                         if (!localStorage.getItem('modalShown')) {
-                         const modal = document.createElement('div');
-                         modal.style.position = 'fixed';
-                         modal.style.top = '50%';
-                         modal.style.left = '50%';
-                         modal.style.transform = 'translate(-50%, -50%)';
-                         modal.style.backgroundColor = 'white';
-                         modal.style.padding = '20px';
-                         modal.style.boxShadow = '0 0 10px rgba(0, 0, 0, 0.1)';
-                         modal.style.zIndex = '1000';
-                         modal.innerHTML = `
-                             <p>Proceso terminado, puedes descargar las soluciones.</p>
-                             <button id="closeModalButton">Aceptar</button>
-                         `;
-                         document.body.appendChild(modal);
-     
-                         const closeModalButton = modal.querySelector('#closeModalButton');
-                         closeModalButton.addEventListener('click', () => {
-                             document.body.removeChild(modal);
-                             localStorage.setItem('modalShown', 'true');
-                         }, { once: true });
-                     }
-                });
-
-                console.log("Terminado");
-
                 });
                 const finalResult = await solve;
+                
                 exportButton.disabled = false; // Habilitar el botón de exportar
 
             } catch (error) {

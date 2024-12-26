@@ -48,7 +48,6 @@
         <select id="solverSelect">
             <option value="chuffed">Chuffed</option>
             <option value="gecode">Gecode</option>
-            <option value="coin-bc">Coin-BC</option>
             <option value="highs">HIGHS 1.7.2</option>
         </select>
         <button id="solveButton" disabled>Ejecutar</button>
@@ -195,7 +194,7 @@ E = array2d(0..n-1, 0..n-1, [
                     console.log(respuesta);
                 });
                 const finalResult = await solve;
-                
+
                 exportButton.disabled = false; // Habilitar el botón de exportar
 
             } catch (error) {

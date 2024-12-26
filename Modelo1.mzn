@@ -1,3 +1,7 @@
+%Joan Sebastián Saavedra Perafán 202313025
+%Juan Manuel Hoyos Contreras 202380796
+%Sebastián Cifuentes Florez 202380764
+
 int: n;  % Tamaño de la matriz
 int: k;  % Número de nuevas localizaciones a seleccionar
 int: v; %Localizaciones establecidas

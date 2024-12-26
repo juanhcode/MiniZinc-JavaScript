@@ -42,15 +42,16 @@
 <body>
     <div class="container">
         <h1>MiniZinc Solver</h1>
+        <h2>Seleccionar Archivo de Ejemplo:</h2>
         <input type="file" id="fileInput" accept=".txt">
         <h2>Seleccionar Solver:</h2>
         <select id="solverSelect">
             <option value="chuffed">Chuffed</option>
             <option value="gecode">Gecode</option>
-            <option value="gurobi">Gurobi</option>
+            <option value="or-tools">Or-tools</option>
         </select>
         <button id="solveButton" disabled>Ejecutar</button>
-        <button id="exportButton" disabled>Exportar Soluciones</button>
+        <button id="exportButton">Exportar Soluciones</button>
     </div>
 
     <script type="module">
@@ -59,7 +60,6 @@
         const solveButton = document.getElementById('solveButton');
         const fileInput = document.getElementById('fileInput');
         const exportButton = document.getElementById('exportButton');
-        console.log("ExportButton" + exportButton);
         const solverSelect = document.getElementById('solverSelect');
 
         let entradaUsuario = '';
@@ -130,7 +130,6 @@ E = array2d(0..n-1, 0..n-1, [
                 const response = await fetch('Modelo1.mzn');
                 const modelCode = await response.text();
                 model.addFile('Modelo1.mzn', modelCode);
-                console.log("Modelo cargado correctamente.");
             } catch (error) {
                 console.error("Error al cargar el modelo:", error);
             }
@@ -160,6 +159,7 @@ E = array2d(0..n-1, 0..n-1, [
                 });
 
                 solve.on('solution', solution => {
+                    console.log("Empezó a resolver");
                     const responseRaw = formatSolutionRaw(solution.output.raw);
                     const lines = responseRaw.trim().split('\n');
                     const primero = lines[0];
@@ -190,14 +190,10 @@ E = array2d(0..n-1, 0..n-1, [
                         .join('\n');
 
                     const respuesta = `${primero}\n${segundo}\n${arrayFormatted2[0]} ${arrayFormatted[0]}\n${arrayFormatted2[1]} ${arrayFormatted[1]}\n${arrayFormatted2[2]} ${arrayFormatted[2]}\n${diccionarioFormateado}`;
-                    console.log(respuesta);
                     soluciones.push(respuesta);
-                    console.log(soluciones);
-                     // Guardamos las soluciones en el array
+                    console.log(respuesta);
+                    // Guardamos las soluciones en el array
                 });
-
-                console.log("Terminado");
-
                 const finalResult = await solve;
                 exportButton.disabled = false; // Habilitar el botón de exportar
 
@@ -208,14 +204,13 @@ E = array2d(0..n-1, 0..n-1, [
 
         // Función para exportar las soluciones a un archivo de texto
         exportButton.addEventListener('click', () => {
-            print("Hola");
-            if (confirm('¿Deseas descargar las soluciones?')) {
-            const blob = new Blob([soluciones.join('\n\n')], { type: 'text/plain' });
-            console.log(blob);
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'soluciones.txt';
-            link.click();
+            const ultimo = soluciones[soluciones.length - 1];
+            if (confirm('¿Deseas descargar la última solución?')) {
+                const blob = new Blob([ultimo], { type: 'text/plain' });
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(blob);
+                link.download = 'ultima_solucion.txt';
+                link.click();
             }
         });
 

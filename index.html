@@ -228,6 +228,10 @@ E = array2d(0..n-1, 0..n-1, [
 
         // Función para exportar las soluciones a un archivo de texto
         exportButton.addEventListener('click', () => {
+            if (soluciones.length === 0) {
+                alert('No hay soluciones para exportar.');
+                return;
+            }
             const ultimo = soluciones[soluciones.length - 1];
             if (confirm('¿Deseas descargar la última solución?')) {
                 const blob = new Blob([ultimo], { type: 'text/plain' });
